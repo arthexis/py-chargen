@@ -1,7 +1,10 @@
 import logging
 from random import Random
 
-import data
+import names
+from nested_lookup import nested_lookup, nested_update
+
+from . import data
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -10,28 +13,48 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "Generator",
     "CoDGen",
-    "Mage2eGen",
+    "Awakening2Gen",
 ]
 
 
-class Dynamic:
-    """Dynamic serializable field."""
+def add_dots(traits, key, dots=1, limit=5):
+    """Add dots to a trait without going over a limit."""
 
-    def __init__(self, func):
-        self.func = func
-
-    def __repr__(self):
-        return self.func()
+    current = nested_lookup(document=traits, key=key)
+    assert len(current) == 1, f"{current}"
+    if value := current[0] + dots <= limit:
+        nested_update(document=traits, key=key, value=value)
+        return True
+    return False
 
 
 class Generator(Random):
     """Skeleton generator for all character types."""
 
-    version = "base"
+    RULES = "base"
 
     def __init__(self, seed=None):
         super().__init__(seed)
         self._seed = seed
+
+    @classmethod
+    def from_rules(cls, rules, seed=None):
+        """Return an instance of a Generator for the specified rules."""
+
+        for subclass in cls.__subclasses__():
+            logger.debug(subclass)
+            if subclass.RULES == rules:
+                return subclass(seed)
+            generator = subclass.from_rules(rules, seed)
+            if generator:
+                return generator
+
+    def flip(self):
+        return bool(self.getrandbits(1))
+
+    def chance(self, percent):
+        assert 0 > percent < 100
+        return self.randint(1, 100) <= percent
 
     def spread(self, size, dots, base=0, limit=5, step=1):
         """Randomly distribute dots to a tuple of specified size."""
@@ -71,16 +94,20 @@ class Generator(Random):
     def generate(self, **traits):
         """Generate a skelleton that can be used by subclasses."""
         return {
-            "version": self.version,
-            "metadata": {"seed": self._seed},
-            "traits": {**traits}
+            "metadata": {
+                "rules": self.RULES,
+                "seed": self._seed,
+            },
+            "names": [names.get_full_name()],
+            "traits": {**traits},
+            "hooks": []
         }
 
 
 class CoDGen(Generator):
     """Generates a complete, valid CoD character."""
 
-    version = "cod"
+    RULES = "cod"
 
     def generate(self, **traits):
         logger.debug("Create CoD character traits.")
@@ -114,11 +141,15 @@ class CoDGen(Generator):
         }
 
         # Assign mundane Merits
-        merit_dots = 10
+        merit_dots = 7
         while merit_dots > 0:
             try:
                 merit = self.choice(data.MERITS)
-                dots = self.choice_under(data.MERIT_DOTS[merit], merit_dots)
+                opts = data.MERIT_DOTS[merit]
+                dots = max([
+                    self.choice_under(opts, merit_dots),
+                    self.choice_under(opts, merit_dots)
+                ])
             except ValueError:
                 continue
             merits[merit] = dots
@@ -126,16 +157,16 @@ class CoDGen(Generator):
 
         # Calculate advantages
         traits["Advantages"] = {
-            "Willpower": Dynamic(lambda: attrs["Resolve"] * attrs["Composure"])
+            "Willpower": min(attrs["Resolve"] + attrs["Composure"], 10)
         }
         return super().generate(**traits)
 
 
 
-class Mage2eGen(CoDGen):
-    """Generates a complete, valid Mage 2nd Ed. character."""
+class Awakening2Gen(CoDGen):
+    """Generates a complete, valid "Mage, the Awakening 2nd Edition" character."""
 
-    version = "mtaw2"
+    RULES = "mtaw2"
 
     def generate(self, gnosis=1, **traits):
         output = super().generate(**traits)
@@ -143,6 +174,8 @@ class Mage2eGen(CoDGen):
         logger.debug("Create Mage 2ed character traits.")
         traits = output["traits"]
         traits["Advantages"]["Gnosis"] = gnosis
+        resistance = self.choice(data.RESISTANCES)
+        add_dots(traits, resistance, 1, 5)
 
         # Choose a path and find the related arcana
         traits["Path"] = path = self.choice(data.PATHS)
@@ -153,5 +186,12 @@ class Mage2eGen(CoDGen):
         traits["Arcana"] = arcana = {x: 0 for x in data.ARCANA}
         arcana[reagents[0]] = 2
         arcana[reagents[1]] = 1
+        arcana_dots = 3
+        while arcana_dots > 0:
+            arcanum = self.choice(data.ARCANA)
+            if traits["Arcana"][arcanum] >= 3 or arcanum == inferior:
+                continue
+            traits["Arcana"][arcanum] +=1
+            arcana_dots -= 1
 
         return output

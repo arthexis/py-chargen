@@ -4,6 +4,8 @@ ATTRIBUTES = [
     "Presence", "Manipulation", "Composure"
 ]
 
+RESISTANCES = ["Resolve", "Stamina", "Composure"]
+
 
 SKILLS = [
     "Academics", "Computer", "Crafts", "Investigation",
