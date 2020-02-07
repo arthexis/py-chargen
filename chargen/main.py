@@ -1,6 +1,4 @@
-import random
 import secrets
-import contextvars
 
 from fastapi import FastAPI
 from starlette.responses import RedirectResponse, Response
@@ -8,6 +6,12 @@ from starlette.responses import RedirectResponse, Response
 from .generators import Generator
 
 app = FastAPI()
+
+
+@app.get("/rules")
+def get_random():
+    """Return a list of available rules."""
+    return ["base", "cod", "vtr2" ,"mtaw2"]
 
 
 @app.get("/{rules}")

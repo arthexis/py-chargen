@@ -155,6 +155,34 @@ MERIT_DOTS = {
 MERITS = list(MERIT_DOTS.keys())
 
 
+# ------------------------------------------------------------------------
+# Vampire, the Requiem
+# ------------------------------------------------------------------------
+
+CLAN_UNIQUE_DISCIPLINES = {
+    "Daeva": "Majesty",
+    "Ventrue": "Dominate",
+    "Nosferatu": "Nightmare",
+    "Gangrel": "Protean",
+    "Mekhet": "Auspex",
+}
+
+CLAN_DISCIPLINES = {
+    "Daeva": ("Majesty", "Celerity", "Vigor"),
+    "Ventrue": ("Dominate", "Animalism", "Fortitude"),
+    "Nosferatu": ("Nightmare", "Vigor", "Obfuscation"),
+    "Gangrel": ("Protean", "Animalism", "Fortitude"),
+    "Mekhet": ("Auspex", "Celerity", "Obfuscate"),
+}
+
+CLANS = list(CLAN_DISCIPLINES.keys())
+
+
+# ------------------------------------------------------------------------
+# Mage, the Awakening
+# ------------------------------------------------------------------------
+
+
 ARCANA = [
     "Death", "Fate", "Forces", "Life", "Matter",
     "Mind", "Prime", "Space", "Spirit", "Time",
